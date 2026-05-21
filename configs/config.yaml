@@ -1,0 +1,101 @@
+# 来电助手 Hybrid RAG 配置文件
+# 参考 RAG-CITY configs/config.yaml 设计
+
+# 路径配置
+paths:
+  data_dir: data
+  indices_dir: indices
+  processed_dir: data/processed
+  vector_store: d:/temp/call_rag_vector  # 使用临时目录避免HNSW问题
+  summary_store: indices/summary_store
+  graph_store: indices/graph.pkl
+  communities: indices/communities.json
+  logs: logs/app.log
+
+# 向量检索配置
+retrieval:
+  vector_k: 10        # 向量检索返回数量
+  graph_k_communities: 3  # 图谱检索返回社区数
+  graph_k_calls: 15       # 图谱检索返回话术数
+  top_n: 5            # 最终返回数量
+  rrf_k_const: 60    # RRF融合常数
+
+# 数据配置
+data:
+  min_text_length: 3
+  max_text_length: 500
+
+# 分类器配置
+classifier:
+  # 外卖/快递关键词
+  delivery_keywords:
+    - 外卖
+    - 饿了么
+    - 美团
+    - 送餐
+    - 取餐
+    - 骑手
+    - 小哥
+    - 快递
+    - 包裹
+    - 顺丰
+    - 中通
+    - 圆通
+    - 韵达
+    - 菜鸟
+  # 风险关键词
+  risk_keywords:
+    - 转账
+    - 汇款
+    - 验证码
+    - 安全账户
+    - 账户异常
+    - 涉嫌
+    - 案件
+    - 中奖
+    - 恭喜
+    - 免费领取
+  # 正常来电关键词
+  normal_keywords:
+    - 领导
+    - 老板
+    - 妈妈
+    - 爸爸
+    - 家人
+    - 朋友
+    - 同学
+    - 同事
+    - 面试
+    - 会议
+    - 打车
+    - 车到了
+    - 老师
+    - 导师
+    - 客户
+
+# 生成配置
+generation:
+  temperature: 0.3
+  max_tokens: 512
+
+# 通义千问API配置（免费版）
+qwen:
+  api_key_env: QWEN_API_KEY
+  base_url: https://dashscope-intl.aliyuncs.com/api/v1
+  model: qwen-turbo      # 免费模型
+  extract_model: qwen-turbo  # 实体抽取模型
+  summary_model: qwen-turbo  # 摘要生成模型
+  timeout: 30
+  max_retries: 3
+
+# Embedding配置
+embedding:
+  backend: bge  # dashscope 或 bge (本地模型)
+  model: BAAI/bge-large-zh-v1.5  # BGE 模型名称（仅 backend=bge 时使用）
+  device: cpu
+  batch_size: 32
+
+# 社区检测配置
+community:
+  min_size: 3       # 最小社区大小
+  seed: 42          # 随机种子
