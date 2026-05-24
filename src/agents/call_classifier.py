@@ -19,16 +19,12 @@ logger = get_logger(__name__)
 # 处理规则配置
 HANDLING_RULES = {
     "外卖配送": {
-        "action": "代接",
+        "action": "转接",
         "response": "机主当前正在上课，请你告知配送员放在东门传达室，提取配送信息发短信通知机主。"
     },
     "快递取件": {
-        "action": "代接",
+        "action": "转接",
         "response": "机主当前正在上课，请你告知配送员放在东门传达室或快递柜，提取配送信息发短信通知机主。"
-    },
-    "打车到达": {
-        "action": "代接",
-        "response": "机主正在上课，请告知对方稍等或让其自行等待，记录短信通知机主。"
     },
     "推销电话": {
         "action": "拦截",
@@ -62,6 +58,10 @@ HANDLING_RULES = {
         "action": "记录",
         "response": "告知对方机主正在上课，询问是否有紧急事项，记录留言后发短信通知机主。"
     },
+    "打车到达": {
+        "action": "转接",
+        "response": "机主正在上课，请告知对方稍等或让其自行等待，记录短信通知机主。"
+    },
     "银行电话": {
         "action": "记录",
         "response": "告知对方机主正在上课，询问是否有紧急事项，记录留言后发短信通知机主回电。"
@@ -73,10 +73,6 @@ HANDLING_RULES = {
     "面试通知": {
         "action": "优先处理",
         "response": "告知对方机主正在上课，询问面试时间和联系方式，记录后发短信通知机主。"
-    },
-    "无意义": {
-        "action": "询问",
-        "response": "告知对方没有听清，请对方重复一遍。"
     },
     "其他": {
         "action": "询问",
@@ -95,7 +91,7 @@ class CallClassifierAgent:
     def __init__(
         self,
         vector_store: Any = None,
-        config_path: Optional[str] = None,
+        config_path: str = None,
         top_k: int = 10
     ):
         """
@@ -240,58 +236,6 @@ class CallClassifierAgent:
 
         return {"category": "其他", "confidence": 0.3, "method": "default"}
 
-    def _is_meaningless(self, text: str) -> bool:
-        """检测文本是否为无意义内容（重复字符、纯数字、无实际语义）"""
-        import re
-
-        text = text.strip()
-        if len(text) < 1:
-            return True
-
-        clean = text.strip()
-        if len(clean) < 2:
-            return True
-
-        # 检测：去空格后连续数字长度 >= 15（如"123 123 123..."、"123123123..."）
-        no_space = re.sub(r'\s+', '', clean)
-        if re.search(r'\d{15,}', no_space):
-            return True
-
-        # 检测：同一个单字重复 >= 3 次且占比 >= 40%（如"有三有三有三"）
-        for ch in set(clean):
-            count = clean.count(ch)
-            if count >= 3 and count / len(clean) >= 0.4:
-                return True
-
-        # 检测：同一个词组重复 >= 3 次且覆盖超过一半文本
-        for wlen in [2, 3]:
-            seen = set()
-            for i in range(len(clean) - wlen + 1):
-                word = clean[i:i + wlen]
-                if word in seen:
-                    continue
-                seen.add(word)
-                count = clean.count(word)
-                if count >= 3 and len(word) * count >= len(clean) * 0.5:
-                    return True
-
-        # 检测：纯数字/计数序列（如"一二三"、"四五六七八"、"123 456"）
-        # 中文数字 + 阿拉伯数字占比超过 60% → 无意义计数
-        chinese_numerals_chars = '一二三四五六七八九十百千万亿零两'
-        numerals = set(chinese_numerals_chars)
-        # 用去空格后的长度计算占比，避免空格稀释比例
-        compact = re.sub(r'\s+', '', clean)
-        if len(compact) >= 2:
-            numeral_count = sum(1 for ch in compact if ch in numerals or ch.isdigit())
-            if numeral_count / len(compact) >= 0.6:
-                # 排除混有明确语义词的情况，如"送餐"
-                meaningful_keys = {'送餐', '取餐', '取件', '打钱', '汇款', '转账',
-                                   '快递', '外卖', '到了', '面试', '开会', '同学'}
-                if not any(kw in clean for kw in meaningful_keys):
-                    return True
-
-        return False
-
     def classify(self, text: str) -> Dict[str, Any]:
         """
         分类对话内容
@@ -309,16 +253,6 @@ class CallClassifierAgent:
         """
         if not text or not text.strip():
             return {"category": "其他", "confidence": 0.0, "method": "none"}
-
-        # 优先检测无意义文本
-        if self._is_meaningless(text):
-            return {
-                "category": "无意义",
-                "confidence": 0.95,
-                "method": "meaningless_detect",
-                "action": "询问",
-                "handling_response": "告知对方没有听清，请对方重复一遍。"
-            }
 
         # 优先使用 RAG 检索
         result = self._retrieve_and_classify(text)
