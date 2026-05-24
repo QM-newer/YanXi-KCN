@@ -9,7 +9,7 @@
 
 <video src="https://raw.githubusercontent.com/QM-newer/YanXi-KCN/main/demo.mp4" controls width="100%"></video>
 
-> 💡 推送后即可在线观看无法正常播放？请尝试[查看源文件](https://github.com/QM-newer/YanXi-KCN/blob/main/demo.mp4)
+> 💡 如果在线无法正常播放，请[点击查看源文件](https://github.com/QM-newer/YanXi-KCN/blob/main/demo.mp4)
 
 ---
 
