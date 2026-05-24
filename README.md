@@ -5,6 +5,14 @@
 
 ---
 
+## 🎬 演示视频
+
+<video src="https://raw.githubusercontent.com/QM-newer/YanXi-KCN/main/demo.mp4" controls width="100%"></video>
+
+> 💡 推送后即可在线观看无法正常播放？请尝试[查看源文件](https://github.com/QM-newer/YanXi-KCN/blob/main/demo.mp4)
+
+---
+
 ## ✨ 核心功能
 
 - 🎙️ **语音识别（ASR）**：基于 OpenAI Whisper（small 模型），支持麦克风实时录音和音频文件识别
