@@ -1,0 +1,207 @@
+[
+  {
+    "community_id": 0,
+    "size": 93,
+    "categories": [
+      "客户来电",
+      "打车到达",
+      "领导来电",
+      "推销电话",
+      "同事协作"
+    ],
+    "core_entities": [],
+    "sample_calls": [],
+    "summary": "这是一个客户来电相关的通话社区，包含93条记录。"
+  },
+  {
+    "community_id": 1,
+    "size": 275,
+    "categories": [
+      "教育培训",
+      "打车到达",
+      "领导来电",
+      "面试邀请",
+      "房产推销",
+      "游戏周年庆",
+      "家人电话",
+      "熟人问候",
+      "外卖配送",
+      "快递取件",
+      "推销电话",
+      "同事协作"
+    ],
+    "core_entities": [],
+    "sample_calls": [],
+    "summary": "这是一个教育培训相关的通话社区，包含275条记录。"
+  },
+  {
+    "community_id": 2,
+    "size": 154,
+    "categories": [
+      "客户来电",
+      "诈骗电话",
+      "领导来电",
+      "熟人问候",
+      "会议通知",
+      "同事协作"
+    ],
+    "core_entities": [],
+    "sample_calls": [],
+    "summary": "这是一个客户来电相关的通话社区，包含154条记录。"
+  },
+  {
+    "community_id": 3,
+    "size": 96,
+    "categories": [
+      "客户来电",
+      "其他服务",
+      "游戏周年庆",
+      "熟人问候",
+      "外卖配送",
+      "会议通知",
+      "快递取件",
+      "同事协作"
+    ],
+    "core_entities": [],
+    "sample_calls": [],
+    "summary": "这是一个客户来电相关的通话社区，包含96条记录。"
+  },
+  {
+    "community_id": 4,
+    "size": 92,
+    "categories": [
+      "保险推销",
+      "家人电话",
+      "同事协作"
+    ],
+    "core_entities": [],
+    "sample_calls": [],
+    "summary": "这是一个保险推销相关的通话社区，包含92条记录。"
+  },
+  {
+    "community_id": 5,
+    "size": 146,
+    "categories": [
+      "诈骗电话",
+      "快递异常",
+      "打车到达",
+      "领导来电",
+      "外卖配送",
+      "快递取件",
+      "同事协作"
+    ],
+    "core_entities": [],
+    "sample_calls": [],
+    "summary": "这是一个诈骗电话相关的通话社区，包含146条记录。"
+  },
+  {
+    "community_id": 6,
+    "size": 81,
+    "categories": [
+      "熟人问候"
+    ],
+    "core_entities": [],
+    "sample_calls": [],
+    "summary": "这是一个熟人问候相关的通话社区，包含81条记录。"
+  },
+  {
+    "community_id": 7,
+    "size": 50,
+    "categories": [
+      "客户来电",
+      "诈骗电话",
+      "打车到达",
+      "银行电话",
+      "快递取件"
+    ],
+    "core_entities": [],
+    "sample_calls": [],
+    "summary": "这是一个客户来电相关的通话社区，包含50条记录。"
+  },
+  {
+    "community_id": 8,
+    "size": 50,
+    "categories": [
+      "预约确认",
+      "客户来电",
+      "外卖配送",
+      "熟人问候"
+    ],
+    "core_entities": [],
+    "sample_calls": [],
+    "summary": "这是一个预约确认相关的通话社区，包含50条记录。"
+  },
+  {
+    "community_id": 9,
+    "size": 66,
+    "categories": [
+      "诈骗电话",
+      "同事协作"
+    ],
+    "core_entities": [],
+    "sample_calls": [],
+    "summary": "这是一个诈骗电话相关的通话社区，包含66条记录。"
+  },
+  {
+    "community_id": 10,
+    "size": 95,
+    "categories": [
+      "熟人问候",
+      "客户来电",
+      "外卖配送",
+      "家人电话"
+    ],
+    "core_entities": [],
+    "sample_calls": [],
+    "summary": "这是一个熟人问候相关的通话社区，包含95条记录。"
+  },
+  {
+    "community_id": 11,
+    "size": 48,
+    "categories": [
+      "保险推销",
+      "外卖配送",
+      "同事协作"
+    ],
+    "core_entities": [],
+    "sample_calls": [],
+    "summary": "这是一个保险推销相关的通话社区，包含48条记录。"
+  },
+  {
+    "community_id": 12,
+    "size": 49,
+    "categories": [
+      "客户来电",
+      "领导来电",
+      "房产推销",
+      "熟人问候",
+      "快递取件",
+      "同事协作"
+    ],
+    "core_entities": [],
+    "sample_calls": [],
+    "summary": "这是一个客户来电相关的通话社区，包含49条记录。"
+  },
+  {
+    "community_id": 13,
+    "size": 88,
+    "categories": [
+      "诈骗电话"
+    ],
+    "core_entities": [],
+    "sample_calls": [],
+    "summary": "这是一个诈骗电话相关的通话社区，包含88条记录。"
+  },
+  {
+    "community_id": 14,
+    "size": 49,
+    "categories": [
+      "熟人问候",
+      "打车到达",
+      "客服回访"
+    ],
+    "core_entities": [],
+    "sample_calls": [],
+    "summary": "这是一个熟人问候相关的通话社区，包含49条记录。"
+  }
+]

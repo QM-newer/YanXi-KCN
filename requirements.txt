@@ -1,0 +1,46 @@
+# 通话来电混合RAG系统依赖
+# ==================== 核心依赖 ====================
+# 向量数据库
+chromadb>=0.4.22
+
+# Embedding模型
+sentence-transformers>=2.2.2
+
+# 知识图谱
+networkx>=3.2.1
+python-louvain>=0.16
+
+# 大模型API
+openai>=1.10.0
+
+# ==================== 辅助依赖 ====================
+# 数据处理
+pandas>=2.0.0
+numpy>=1.24.0
+
+# 中文处理
+jieba>=0.42.1
+
+# ==================== 语音相关 ====================
+# 语音识别
+openai-whisper>=20231117
+
+# 文字转语音 (微软 Edge TTS)
+edge-tts>=6.1.10
+
+# 音频播放
+pygame>=2.5.0
+
+# 麦克风录音（sounddevice 更易安装）
+sounddevice>=0.4.6
+soundfile>=0.12.1
+
+# ==================== 可选依赖 ====================
+# 可视化（调试用）
+matplotlib>=3.7.0
+seaborn>=0.12.0
+
+# Web界面（演示用）
+streamlit>=1.28.0
+
+# 安装命令: pip install -r requirements.txt
