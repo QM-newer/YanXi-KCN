@@ -1,27 +1,22 @@
-# 📞 来电助手 — Hybrid RAG 智能来电分类系统
+# 📞 言犀 — AI 智能通话管家
 
-> 基于混合 RAG（检索增强生成）+ Whisper ASR 的智能来电分类与处理系统。  
-> 核心场景：用户上课期间，自动识别来电类型，并给出代接/拦截/记录等处理建议。
-
----
-
-## 🎬 演示视频
-
-<video src="https://github.com/QM-newer/YanXi-KCN/releases/download/v1.0.0/demo.mp4" controls width="100%"></video>
-
-> 📥 如果无法播放，请直接[下载 demo.mp4](https://github.com/QM-newer/YanXi-KCN/releases/download/v1.0.0/demo.mp4)（52.6 MB）
+> 国家级大创项目 | v3.0 | 基于 RAG + 智谱 GLM 的智能来电代接系统
+>
+> 核心场景：用户上课/不便接听时，自动识别来电类型并给出代接、拦截、转接通知等处理。
 
 ---
 
 ## ✨ 核心功能
 
-- 🎙️ **语音识别（ASR）**：基于 OpenAI Whisper（small 模型），支持麦克风实时录音和音频文件识别
-- 🧠 **智能分类**：RAG 向量检索 + 关键词匹配 + LLM 增强，三级分类策略覆盖 **16 种来电类型**
-- 📋 **处理规则**：针对每种来电类型预设处理动作（代接/拦截/记录/优先处理/询问）
-- 🔍 **混合检索**：ChromaDB 向量检索 + NetworkX 知识图谱 + Louvain 社区检测 + RRF 融合
-- 🤖 **LLM 问答**：基于通义千问 qwen-turbo 的上下文感知答案生成
-- 🛡️ **无意义检测**：自动过滤纯数字、重复字符、计数序列等无效语音输入
-- 📊 **离线索引**：预构建 1550 条通话记录的向量库 + 2836 节点知识图谱 + 15 个社区检测
+- **🧠 智能分类**：RAG 向量检索 + 关键词匹配 + LLM 增强，6 关 Pipeline 覆盖 4 大类来电
+- **🤖 Agent 代接**：5 类 LLM Agent（外卖/快递/诈骗/重要多轮/通用），few-shot 示例驱动自然对话
+- **📋 自动处理**：外卖快递自动引导放置点、诈骗电话直接拦截、重要来电 4 轮事务转达并通知机主
+- **🎙️ 语音模式**：Vosk 离线语音识别 + Edge TTS 语音合成，无需联网
+- **👤 用户画像**：per-user 课表、白名单、自动规则、紧急通知偏好，`--setup` 交互式配置
+- **🔍 RAG 知识库**：500 条来电记录 → Chroma 向量库，L2 距离检索 + 关键词纠偏 + 反向校验
+- **🛡️ 安全兜底**：28 个敏感词直接拦截 + 诈骗自动入库 + 换菜/退货等不代决定
+- **📊 质检闭环**：通话质检 → 标记错误 → `--learn` 增量学习入库 → 向量库重建
+- **🌐 REST API**：FastAPI 9 端点，Pydantic 类型校验，线程安全，支持并发
 
 ---
 
@@ -30,14 +25,8 @@
 ### 1. 环境准备
 
 ```bash
-# 克隆仓库
 git clone <your-repo-url>
-cd call_hybrid_rag
-
-# 创建虚拟环境
-python -m venv venv
-venv\Scripts\activate   # Windows
-# source venv/bin/activate  # macOS/Linux
+cd yanxi-re0
 
 # 安装依赖
 pip install -r requirements.txt
@@ -45,125 +34,137 @@ pip install -r requirements.txt
 
 ### 2. 配置 API Key
 
-复制 `.env.example` 为 `.env` 并填写你的通义千问 API Key：
-
-```env
-QWEN_API_KEY=sk-your-api-key-here
+```bash
+cp key.env.example key.env
 ```
 
-> 仅使用 RAG 分类（不调用 LLM）时可不配置。
+编辑 `key.env`，填入智谱 API Key（[获取地址](https://open.bigmodel.cn/)）：
 
-### 3. 构建离线索引（首次使用）
+```
+ZHIPUAI_API_KEY=你的API_KEY
+ZHIPU_MODEL=glm-4-flash
+```
+
+> 💡 仅使用 Ollama 本地模型时无需智谱 Key，修改 `LLM_BACKEND=ollama` 即可。
+
+### 3. 首次运行
 
 ```bash
-# 准备通话数据
-python scripts/prepare_call_data.py
-
-# 构建向量索引 + 知识图谱 + 社区检测
-python scripts/build_indices.py
+python main.py
 ```
 
-构建完成后将在 `indices/` 目录下生成：
-- `vector_store_v6/` — 通话记录向量库（1550 条）
-- `graph.pkl` — 知识图谱（2836 节点，3231 边）
-- `communities.json` — 社区检测结果（15 个社区）
-- `summary_store/` — 社区摘要向量库
+首次启动自动构建 Chroma 向量库（约 1-2 分钟）。之后每次启动直接加载已有向量库。
 
 ---
 
-## 🎤 语音分类（推荐入口）
+## 🎤 使用方式
 
-### 麦克风模式
-
-```bash
-cd voice
-python voice_call.py mic
-```
-
-按键操作：按 **空格键** 开始录音 → 说话 → 再按 **空格键** 停止 → 自动分类
-
-### 音频文件模式
+### 文本模拟（推荐入门）
 
 ```bash
-cd voice
-python voice_call.py file test.mp3
+python main.py              # 键盘输入来电内容，查看 AI 回复
+python main.py --debug      # 调试模式，显示 RAG 分类过程
 ```
 
-### 交互模式
+```
+[call_001] 来电内容: 喂你的外卖到了给你放哪
+>> 言犀回复: 放东门快递柜吧，谢谢！
+```
+
+### 语音模式
 
 ```bash
-cd voice
-python voice_call.py
+python main.py --voice      # 麦克风录音 → ASR 识别 → AI 回复 → TTS 播报
 ```
 
-输入文本即可分类，输入 `q` 退出。
-
-### 生成测试音频
+### 个人设置向导
 
 ```bash
-cd voice
-python generate_test_audio.py
-# 将生成 test_audio.mp3 并自动播放
+python main.py --setup      # 交互式配置课表、收件位置、紧急联系人等
 ```
+
+### REST API
+
+```bash
+uvicorn api:app --host 0.0.0.0 --port 8000
+# 访问 http://localhost:8000/docs 查看 Swagger 接口文档
+```
+
+| 端点 | 说明 |
+|------|------|
+| `POST /api/v1/calls` | 创建新通话 |
+| `POST /api/v1/calls/{id}/turns` | 发送一轮对话 |
+| `GET /api/v1/calls/{id}` | 查询通话摘要 |
+| `POST /api/v1/calls/{id}/review` | 提交质检结果 |
+| `GET/PUT /api/v1/users/{id}` | 用户画像 CRUD |
+| `POST /api/v1/users/{id}/auto-rules` | 自动规则管理 |
+| `POST /api/v1/knowledge/learn` | 知识库增量学习 |
+| `GET /api/v1/stats` | 系统运行状态 |
 
 ---
 
 ## 📖 来电分类类型
 
-系统支持 **16 种来电类型**，每种类型有预设处理动作：
-
 | 来电类型 | 处理动作 | 处理规则 |
-|---------|---------|---------|
-| 外卖配送 | 代接 | 告知配送员放东门传达室，提取配送信息发短信通知 |
-| 快递取件 | 代接 | 告知配送员放东门传达室或快递柜，提取配送信息发短信通知 |
-| 打车到达 | 代接 | 告知稍等，记录短信通知 |
-| 推销电话 | 拦截 | 直接挂断，推送推销来电提醒短信 |
-| 诈骗电话 | 拦截 | 直接拦截挂断，推送风险提醒短信 |
-| 诈骗风险 | 拦截 | 直接拦截挂断，推送风险提醒短信 |
-| 游戏周年庆 | 拦截 | 直接挂断，标记为营销来电 |
-| 熟人问候 | 记录 | 询问是否有急事，不紧急晚点联系，紧急记录通知 |
-| 同事协作 | 记录 | 询问是否紧急，不紧急留言，紧急记录通知 |
-| 客户来电 | 记录 | 询问是否有紧急事项，记录留言通知 |
-| 银行电话 | 记录 | 询问是否有紧急事项，记录留言通知 |
-| 领导来电 | 优先处理 | 询问是否有急事，记录留言后发短信通知回电 |
-| 面试通知 | 优先处理 | 询问面试时间和联系方式，记录通知 |
-| 家人电话 | 询问 | 询问是否紧急，不紧急晚点联系 |
-| 无意义 | 询问 | 告知没有听清，请对方重复一遍 |
-| 其他 | 询问 | 告知正在上课，询问来电事由并记录 |
+|----------|----------|----------|
+| 外卖/快递 | 代接 | 上课时段自动引导放置点，周末按用户设置决定是否转接 |
+| 外卖/快递（需决策） | 转接 | 换菜/退货/缺货/损坏等不代决定，引导对方 APP 留言通知机主 |
+| 诈骗/推销 | 拦截 | 直接回复"不需要，谢谢。"，自动入库诈骗黑名单 |
+| 重要来电（普通） | 事务转达 | 4 轮对话收集信息（身份→事由→补充→复述确认），结束通知机主 |
+| 重要来电（紧急） | 优先通知 | 医院/急诊等命中关键词立刻通知机主，通话不挂断继续收集信息 |
+| 普通来电 | 通用兜底 | 礼貌询问对方身份，告知稍后回电 |
+
+---
+
+## 🔄 全链路 Pipeline
+
+```
+来电输入
+  ├─ Gate 0a: 自动拦截规则（用户学习的一律拦截词）
+  ├─ Gate 0b: 来电白名单（known_callers 直接路由）
+  ├─ Gate 0c: 自动放行规则（用户学习的一律放行词）
+  ├─ Gate 0d: 自动通知规则
+  ├─ Gate 1:  敏感词兜底拦截（28 个强敏感词）
+  ├─ Gate 2:  RAG 向量检索 + 阈值过滤（score > 1.2 → 兜底）
+  ├─ Gate 2.5: 关键词纠偏（外卖/重要信号词强制修正）
+  ├─ Gate 2.6: 反向校验（无信号词则降级为普通来电）
+  └─ Gate 3:  Agent 路由
+       ├─ 外卖/快递 → 时间调度 + 决策检测
+       ├─ 诈骗/推销 → "不需要，谢谢。"
+       ├─ 重要来电 → 4 轮事务转达 + 紧急分级通知
+       └─ 普通来电 → 通用礼貌回复
+```
 
 ---
 
 ## 📁 项目结构
 
 ```
-call_hybrid_rag/
-├── voice/                         # 🎙️ 语音模块
-│   ├── asr.py                     #   Whisper ASR（文件 + 麦克风录音）
-│   ├── voice_call.py              #   语音分类主入口（mic/file/interactive）
-│   ├── generate_test_audio.py     #   Edge-TTS 测试音频生成
-│   └── __init__.py
-├── src/                           # 🧠 核心引擎
-│   ├── agents/
-│   │   └── call_classifier.py     #   电话分类 Agent（16 类 + 无意义检测）
-│   ├── hybrid_rag.py              #   Hybrid RAG 主类（路由→检索→融合→生成）
-│   ├── pipeline.py                #   来电助手主流程
-│   ├── factory.py                 #   依赖注入工厂
-│   ├── data/                      #   数据处理（加载器 + 清洗器）
-│   ├── indexing/                  #   离线索引构建（向量 + 图谱 + 社区）
-│   ├── retrieval/                 #   检索模块（路由 + 向量 + 图谱 + 融合 + 重排）
-│   ├── generation/                #   LLM 答案生成
-│   └── utils/                     #   工具（配置 + 日志 + LLM 客户端）
-├── scripts/                       # 📜 命令行脚本
-│   ├── build_indices.py           #   索引构建
-│   ├── prepare_call_data.py       #   数据预处理
-│   ├── classifier.py              #   分类器交互测试
-│   └── query.py                   #   RAG 交互查询
-├── configs/
-│   └── config.yaml                #   总配置文件
-├── indices/                       #   预构建的索引文件
-├── tests/                         #   单元测试
-├── requirements.txt
-└── README.md
+yanxi-re0/
+├─ main.py                  # CLI 入口（文本/语音/质检/设置/增量学习）
+├─ api.py                   # REST API（FastAPI 9 端点）
+├─ pipeline.py              # 全链路编排器（6 关 + 线程安全）
+├─ agents.py                # LLM Agent（5 类场景 + few-shot）
+├─ knowledge_base.py        # RAG 知识库（Chroma + sentence-transformers）
+├─ user_manager.py          # 用户画像管理（课表/白名单/自动规则）
+├─ models.py                # Pydantic 数据结构
+├─ config.py                # 全局配置
+├─ test_full.py             # 全场景自动化测试（16 用例）
+├─ speech/                  # 🎙️ 语音模块
+│   ├─ asr.py               #   Vosk 离线语音识别
+│   └─ tts.py               #   Edge TTS 语音合成
+├─ docs/                    # 📖 项目文档
+│   ├─ README.md            #   项目入口（本文件）
+│   ├─ FEATURES.md          #   功能清单与实现状态
+│   ├─ DEVLOG.md            #   版本变更记录
+│   └─ ARCHITECTURE.md      #   设计决策与架构
+├─ data/
+│   ├─ 200条来电记录.txt     #   知识库数据（500 条）
+│   └─ users/               #   per-user 画像/记录
+├─ tests/                   #   测试报告
+├─ requirements.txt
+├─ key.env.example
+└─ .gitignore
 ```
 
 ---
@@ -172,51 +173,50 @@ call_hybrid_rag/
 
 | 类别 | 技术 | 用途 |
 |------|------|------|
-| ASR | OpenAI Whisper (small) | 语音转文字，中文优化 |
-| TTS | Edge-TTS | 测试音频生成 |
-| 录音 | sounddevice / pyaudio | 麦克风实时录音 |
-| 向量数据库 | ChromaDB | 通话记录向量存储 + 社区摘要存储 |
-| Embedding | BGE-large-zh-v1.5 | 中文文本向量化（1024 维） |
-| 知识图谱 | NetworkX + python-louvain | 实体关系图 + Louvain 社区检测 |
-| LLM API | 通义千问 qwen-turbo | 分类增强 + 答案生成 |
-| 检索融合 | RRF (Reciprocal Rank Fusion) | 向量检索 + 图谱检索结果融合 |
+| LLM | 智谱 GLM-4-Flash / Ollama | 5 类 Agent 回复生成 |
+| RAG | LangChain + Chroma | 500 条来电记录向量检索 |
+| Embedding | sentence-transformers MiniLM | 中文文本向量化 |
+| ASR | Vosk（离线） | 语音转文字 |
+| TTS | Edge TTS | 文字转语音播报 |
+| API | FastAPI + Pydantic v2 | REST 接口 + Swagger 文档 |
+| 用户管理 | per-user JSON Profile | 课表/白名单/自动规则持久化 |
 
 ---
 
 ## 🔧 可用命令
 
 ```bash
-# === 语音分类 ===
-python voice/voice_call.py mic              # 麦克风按键录音分类
-python voice/voice_call.py mic --auto 10    # 自动录音 10 秒分类
-python voice/voice_call.py file test.mp3    # 音频文件分类
-python voice/voice_call.py                  # 交互式文本分类
+# === 主入口 ===
+python main.py                  # 文本模拟模式
+python main.py --debug          # 调试模式（显示分类过程）
+python main.py --voice          # 语音模式（麦克风 + TTS）
+python main.py --user 用户名     # 切换用户
 
-# === 独立 ASR 测试 ===
-python -m voice.asr mic                     # 麦克风语音转文字
-python -m voice.asr file test.mp3           # 音频文件转文字
+# === 设置与维护 ===
+python main.py --setup          # 个人习惯设置向导
+python main.py --rebuild        # 重建向量库（修改知识库后）
+python main.py --review         # 通话质检（交互式 y/n/s）
+python main.py --learn          # 增量学习（从质检修正样本入库）
 
-# === RAG 查询 ===
-python scripts/query.py                     # 交互式 RAG 问答
+# === API 服务 ===
+uvicorn api:app --host 0.0.0.0 --port 8000
 
-# === 分类器测试 ===
-python scripts/classifier.py                # 测试 16 类分类
-
-# === 索引构建 ===
-python scripts/build_indices.py             # 构建全部索引
+# === 测试 ===
+python test_full.py             # 16 场景自动化测试
 ```
 
 ---
 
 ## ⚠️ 注意事项
 
-- **API Key**：LLM 增强功能需要配置通义千问 API Key，纯 RAG 分类可不配置
-- **模型下载**：首次运行 ASR 时，Whisper 会自动下载 `small` 模型（~1GB），请确保网络畅通
-- **pyaudio**：录音库优先使用 sounddevice，pyaudio 作为 Windows 上的备选方案
-- **索引文件**：`indices/` 目录已预构建完成，如需重建请运行 `python scripts/build_indices.py`
+- **API Key**：使用智谱 LLM 需配置 `ZHIPUAI_API_KEY`，纯 Ollama 本地模式可不配置
+- **向量库**：首次运行自动构建（约 1-2 分钟），之后启动秒级加载
+- **模型下载**：首次运行会自动下载 sentence-transformers MiniLM 模型（~500MB），请确保网络畅通
+- **Vosk 模型**：语音模式需提前下载 Vosk 中文模型到 `../vosk-model-cn-0.22/`
+- **知识库格式**：`data/200条来电记录.txt` 为 CSV 格式（编号,内容,分类,规则标签），支持手动追加后 `--rebuild`
 
 ---
 
-## 📄 License
+## 📄 许可证
 
-MIT License
+MIT 许可证
