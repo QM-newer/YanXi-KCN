@@ -7,9 +7,7 @@
 
 ## 🎬 演示视频
 
-<video src="https://raw.githubusercontent.com/QM-newer/YanXi-KCN/main/demo.mp4" controls width="100%"></video>
-
-> 💡 如果在线无法正常播放，请[点击查看源文件](https://github.com/QM-newer/YanXi-KCN/blob/main/demo.mp4)
+> 📥 演示视频已移至 [GitHub Releases](https://github.com/QM-newer/YanXi-KCN/releases)，请前往下载 `demo.mp4`
 
 ---
 
