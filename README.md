@@ -7,7 +7,9 @@
 
 ## 🎬 演示视频
 
-> 📥 演示视频已移至 [GitHub Releases](https://github.com/QM-newer/YanXi-KCN/releases)，请前往下载 `demo.mp4`
+<video src="https://github.com/QM-newer/YanXi-KCN/releases/download/v1.0.0/demo.mp4" controls width="100%"></video>
+
+> 📥 如果无法播放，请直接[下载 demo.mp4](https://github.com/QM-newer/YanXi-KCN/releases/download/v1.0.0/demo.mp4)（52.6 MB）
 
 ---
 
