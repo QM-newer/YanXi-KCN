@@ -359,10 +359,19 @@ class CallClassifierAgent:
 
             result = client.call(prompt)
             if result:
-                result = result.strip()
+                result = result.strip().rstrip("。.!！?？,，、；;：:\n\r")
                 categories = ["外卖配送", "快递取件", "推销电话", "诈骗风险", "熟人问候",
                              "家人电话", "领导来电", "同事协作", "客户来电", "打车到达",
                              "银行电话", "游戏周年庆", "面试通知"]
+                # 模糊匹配：检查 LLM 返回文本中是否包含已知类型名称
+                for cat in categories:
+                    if cat in result:
+                        return {
+                            "category": cat,
+                            "confidence": 0.9,
+                            "method": "llm"
+                        }
+                # 精确匹配兜底
                 if result in categories:
                     return {
                         "category": result,

@@ -146,7 +146,7 @@ def extract_entities_from_record(record: dict, llm_client: QwenClient = None) ->
 
 只输出 JSON 格式:"""
 
-            response = llm_client.generate(prompt)
+            response = llm_client.call(prompt)
             import json
             try:
                 result = json.loads(response)

@@ -196,15 +196,22 @@ class CallRouter:
             normal_count = 0
 
             for doc in results:
-                content = doc.page_content.lower()
+                content = doc.page_content.lower() if doc.page_content else ""
                 meta = doc.metadata or {}
 
-                # 统计命中
-                if any(kw in content for kw in ["外卖", "饿了么", "美团", "取餐", "骑手"]):
+                # 统计命中 - 同时用 content 关键词 + metadata
+                if any(kw in content for kw in ["外卖", "饿了么", "美团", "取餐", "骑手", "快递", "配送", "送餐", "取件"]):
                     delivery_count += 1
-                if meta.get("is_risky") or any(t in meta.get("topics", []) for t in ["诈骗", "可疑", "推销"]):
+                # RISK 检测：metadata 标签 + 内容关键词双重保障
+                is_risky_meta = meta.get("is_risky") or any(
+                    t in str(meta.get("topics", "")) for t in ["诈骗", "可疑", "推销"]
+                ) or meta.get("category") in ["诈骗风险", "诈骗电话", "推销电话", "诈骗"]
+                is_risky_content = any(
+                    kw in content for kw in ["转账", "验证码", "中奖", "诈骗", "汇款", "安全账户", "涉嫌", "免费领"]
+                )
+                if is_risky_meta or is_risky_content:
                     risk_count += 1
-                if any(kw in content for kw in ["领导", "老板", "客户", "家人", "面试"]):
+                if any(kw in content for kw in ["领导", "老板", "客户", "家人", "面试", "会议", "同事", "朋友", "老婆", "老公", "妈妈", "爸爸", "打车"]):
                     normal_count += 1
 
             total = delivery_count + risk_count + normal_count

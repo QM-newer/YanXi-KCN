@@ -206,7 +206,7 @@ def generate_single_summary(
 
     try:
         if llm_client:
-            response = llm_client.generate(prompt)
+            response = llm_client.call(prompt)
             summary_text = response.strip() if response else f"这是一个{categories[0] if categories else '其他'}相关的通话社区。"
         else:
             summary_text = f"这是一个{categories[0] if categories else '其他'}相关的通话社区，包含{size}条记录。"
@@ -287,7 +287,7 @@ def build_summary_index(
         Chroma 向量库
     """
     try:
-        from langchain_community.vectorstores import Chroma
+        from langchain_chroma import Chroma
         from langchain_core.documents import Document
     except ImportError:
         logger.error("请安装 chromadb 和 langchain: pip install chromadb langchain")

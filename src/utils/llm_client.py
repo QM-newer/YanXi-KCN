@@ -52,7 +52,7 @@ class QwenClient:
         return self._fallback_response(prompt)
 
     def _call_with_dashscope(self, prompt: str, system: str = None, **kwargs) -> Optional[str]:
-        """使用dashscope库调用"""
+        """使用dashscope库调用（含重试）"""
         try:
             import dashscope
             from dashscope import Generation
@@ -64,19 +64,30 @@ class QwenClient:
                 messages.append({"role": "system", "content": system})
             messages.append({"role": "user", "content": prompt})
 
-            response = Generation.call(
-                model=self.model,
-                messages=messages,
-                temperature=kwargs.get("temperature", self.temperature),
-                max_tokens=kwargs.get("max_tokens", self.max_tokens),
-                result_format="message"
-            )
+            temp = kwargs.get("temperature", self.temperature)
+            max_tok = kwargs.get("max_tokens", self.max_tokens)
 
-            if response.status_code == 200:
-                return response.output.choices[0].message.content
-            else:
-                logger.warning(f"Dashscope错误: {response.code} {response.message}")
-                return None
+            for attempt in range(self.max_retries):
+                response = Generation.call(
+                    model=self.model,
+                    messages=messages,
+                    temperature=temp,
+                    max_tokens=max_tok,
+                    result_format="message"
+                )
+
+                if response.status_code == 200:
+                    return response.output.choices[0].message.content
+                else:
+                    logger.warning(
+                        f"Dashscope错误 (尝试 {attempt+1}/{self.max_retries}): "
+                        f"code={response.code}, message={response.message}"
+                    )
+                    if attempt < self.max_retries - 1:
+                        import time
+                        time.sleep(0.5 * (attempt + 1))  # 递增等待
+
+            return None
 
         except ImportError:
             logger.warning("dashscope未安装")

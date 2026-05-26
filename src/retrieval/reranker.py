@@ -64,6 +64,17 @@ class SimpleReranker:
 
         return [doc for doc, score in scored_docs[:top_n]]
 
+    @staticmethod
+    def _tokenize(text: str) -> set:
+        """分词：提取中文双字以上词组和英文单词"""
+        import re
+        tokens = set()
+        for m in re.finditer(r'[\u4e00-\u9fff]{2,}', text):
+            tokens.add(m.group())
+        for m in re.finditer(r'[a-zA-Z]{2,}', text):
+            tokens.add(m.group())
+        return tokens
+
     def _compute_score(
         self,
         doc: Document,
@@ -74,11 +85,11 @@ class SimpleReranker:
         score = 0.0
         content_lower = doc.page_content.lower()
 
-        # 基础相关度：query词在文档中出现的次数
-        query_terms = set(query)
-        content_terms = set(content_lower)
-        overlap = len(query_terms & content_terms)
-        score += overlap * 0.1
+        # 基础相关度：使用词级重叠
+        query_tokens = self._tokenize(query)
+        content_tokens = self._tokenize(content_lower)
+        overlap = len(query_tokens & content_tokens)
+        score += overlap * 0.3
 
         # 分类boost
         if category and category in self.boost_keywords:

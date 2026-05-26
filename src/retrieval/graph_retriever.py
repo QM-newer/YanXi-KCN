@@ -55,19 +55,28 @@ class GraphRetriever:
     def _load(self):
         """加载图谱和社区数据"""
         # 加载图谱（支持 JSON 和 pickle 格式）
-        if Path(self.graph_path).exists():
+        graph_file = Path(self.graph_path)
+        if graph_file.exists():
             try:
-                with open(self.graph_path, 'r', encoding='utf-8') as f:
-                    data = json.load(f)
-                # 构建简单的图结构
-                import networkx as nx
-                G = nx.Graph()
-                for node in data.get('nodes', []):
-                    G.add_node(node['id'], **node.get('properties', {}))
-                for rel in data.get('relations', []):
-                    G.add_edge(rel['source'], rel['target'])
-                self.graph = G
-                logger.info(f"加载图谱: {G.number_of_nodes()} 节点, {G.number_of_edges()} 边")
+                # 根据扩展名或用 fallback 方式决定加载方式
+                if graph_file.suffix == '.pkl':
+                    # 先尝试 pickle 加载
+                    try:
+                        import pickle
+                        with open(graph_file, 'rb') as f:
+                            self.graph = pickle.load(f)
+                        logger.info(f"加载图谱(pickle): {self.graph.number_of_nodes()} 节点, {self.graph.number_of_edges()} 边")
+                    except (pickle.UnpicklingError, UnicodeDecodeError, EOFError):
+                        # 回退到 JSON（可能文件内容就是 JSON 但扩展名是 .pkl）
+                        with open(graph_file, 'r', encoding='utf-8') as f:
+                            data = json.load(f)
+                        self._build_graph_from_json(data)
+                        logger.info(f"加载图谱(JSON回退): {self.graph.number_of_nodes()} 节点, {self.graph.number_of_edges()} 边")
+                else:
+                    with open(graph_file, 'r', encoding='utf-8') as f:
+                        data = json.load(f)
+                    self._build_graph_from_json(data)
+                    logger.info(f"加载图谱(JSON): {self.graph.number_of_nodes()} 节点, {self.graph.number_of_edges()} 边")
             except Exception as e:
                 logger.warning(f"图谱加载失败: {e}")
 
@@ -87,6 +96,16 @@ class GraphRetriever:
             except Exception as e:
                 logger.warning(f"社区加载失败: {e}")
 
+    def _build_graph_from_json(self, data: dict) -> None:
+        """从 JSON 数据构建 NetworkX 图"""
+        import networkx as nx
+        G = nx.Graph()
+        for node in data.get('nodes', []):
+            G.add_node(node['id'], **node.get('properties', {}))
+        for rel in data.get('relations', []):
+            G.add_edge(rel['source'], rel['target'])
+        self.graph = G
+
     def retrieve(self, query: str, k: int = None) -> List[Document]:
         """
         图谱检索
@@ -105,8 +124,20 @@ class GraphRetriever:
             logger.warning("社区数据未加载")
             return docs
 
-        # 1. 找到最相关的社区
-        matched_communities = self._find_relevant_communities(query, k=3)
+        # 1. 优先尝试 summary_db 向量检索
+        if self.summary_db is not None:
+            try:
+                summary_docs = self.summary_db.similarity_search(query, k=3)
+                matched_communities = []
+                for doc in summary_docs:
+                    cid_val = doc.metadata.get("community_id")
+                    if cid_val is not None:
+                        matched_communities.append((cid_val, 1.0))
+            except Exception as e:
+                logger.warning(f"向量摘要检索失败: {e}")
+                matched_communities = self._find_relevant_communities(query, k=3)
+        else:
+            matched_communities = self._find_relevant_communities(query, k=3)
 
         if not matched_communities:
             logger.info("未找到匹配社区，使用关键词匹配")
@@ -144,10 +175,23 @@ class GraphRetriever:
         logger.info(f"图谱检索返回 {len(docs)} 个文档")
         return docs
 
+    @staticmethod
+    def _tokenize(text: str) -> set:
+        """分词：提取中文双字以上词组和英文单词"""
+        import re
+        tokens = set()
+        # 中文连续序列 (2+ 字符) 
+        for m in re.finditer(r'[\u4e00-\u9fff]{2,}', text):
+            tokens.add(m.group())
+        # 英文单词 (2+ 字符)
+        for m in re.finditer(r'[a-zA-Z]{2,}', text):
+            tokens.add(m.group())
+        return tokens
+
     def _find_relevant_communities(self, query: str, k: int = 3) -> List[tuple]:
         """找到最相关的社区"""
         query_lower = query.lower()
-        query_words = set(query_lower)
+        query_words = self._tokenize(query_lower)
 
         scored_communities = []
 
@@ -159,7 +203,7 @@ class GraphRetriever:
             if summary:
                 # 关键词匹配
                 for word in query_words:
-                    if len(word) >= 2 and word in summary:
+                    if word in summary:
                         score += 1.0
 
                 # 类别匹配 (categories 是列表)
@@ -168,7 +212,7 @@ class GraphRetriever:
                     if cat.lower() in query_lower:
                         score += 2.0
                     for word in query_words:
-                        if len(word) >= 2 and word in cat.lower():
+                        if word in cat.lower():
                             score += 0.5
 
             # 样本通话匹配
@@ -176,11 +220,15 @@ class GraphRetriever:
             for call in sample_calls:
                 call_content = call.lower() if isinstance(call, str) else ''
                 for word in query_words:
-                    if len(word) >= 2 and word in call_content:
+                    if word in call_content:
                         score += 0.3
 
             if score > 0:
-                scored_communities.append((int(cid_str), score))
+                try:
+                    cid = int(cid_str)
+                except (ValueError, TypeError):
+                    cid = cid_str
+                scored_communities.append((cid, score))
 
         # 按分数排序
         scored_communities.sort(key=lambda x: x[1], reverse=True)
@@ -190,6 +238,7 @@ class GraphRetriever:
         """关键词匹配 - 从社区摘要中匹配"""
         docs = []
         query_lower = query.lower()
+        query_words = self._tokenize(query_lower)
 
         if self.communities is None:
             return docs
@@ -201,8 +250,8 @@ class GraphRetriever:
             # 匹配摘要内容
             summary = community.get('summary', '').lower()
             if summary:
-                for word in query_lower.split():
-                    if len(word) >= 2 and word in summary:
+                for word in query_words:
+                    if word in summary:
                         score += 1.0
 
             # 匹配类别
@@ -210,18 +259,22 @@ class GraphRetriever:
             for cat in categories:
                 if cat.lower() in query_lower:
                     score += 2.0
-                for word in query_lower.split():
-                    if len(word) >= 2 and word in cat.lower():
+                for word in query_words:
+                    if word in cat.lower():
                         score += 0.5
 
             if score > 0:
+                try:
+                    cid = int(cid_str)
+                except (ValueError, TypeError):
+                    cid = cid_str
                 # 从摘要生成一个文档
                 cats_str = ', '.join(categories) if categories else ''
-                content = f"[社区{int(cid_str)}] {cats_str}\n{summary}" if cats_str else summary
+                content = f"[社区{cid}] {cats_str}\n{summary}" if cats_str else summary
                 doc = Document(
                     page_content=content,
                     metadata={
-                        "community_id": int(cid_str),
+                        "community_id": cid,
                         "categories": categories,
                         "score": score
                     }

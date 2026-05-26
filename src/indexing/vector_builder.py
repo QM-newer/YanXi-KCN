@@ -61,7 +61,7 @@ def build_vector_index(
     Returns:
         Chroma 向量库
     """
-    from langchain_community.vectorstores import Chroma
+    from langchain_chroma import Chroma
 
     # 转换为文档
     documents = []
@@ -152,7 +152,7 @@ def load_vector_index(
             logger.info(f"加载向量索引: {collection.count()} 条记录")
 
             # 创建 LangChain wrapper
-            from langchain_community.vectorstores import Chroma
+            from langchain_chroma import Chroma
             db = Chroma(
                 client=client,
                 collection_name=collection_name,

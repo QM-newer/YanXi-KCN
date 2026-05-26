@@ -150,7 +150,7 @@ class CallAssistantPipeline:
 
         total_time = time.time() - start_time
         timing["total"] = total_time
-        logger.info(f"⏱️ 耗时: {total_time*1000:.0f}ms")
+        logger.info(f"[TIMING] 耗时: {total_time*1000:.0f}ms")
 
         return result
 
