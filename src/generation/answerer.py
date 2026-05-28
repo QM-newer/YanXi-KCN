@@ -2,8 +2,6 @@
 答案生成器
 ==========
 基于检索结果生成答案
-
-参考 RAG-CITY src/generation/answerer.py 设计
 """
 
 from typing import List, Dict, Any, Optional

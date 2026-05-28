@@ -2,8 +2,6 @@
 LLM 路由决策
 ============
 使用 LLM 判断查询类型
-
-参考 RAG-CITY src/retrieval/router.py 设计
 """
 
 from dataclasses import dataclass
@@ -53,7 +51,8 @@ class LLMRouter:
     """
     LLM 路由决策器
 
-    使用 LLM 判断查询类型，决定使用哪种检索策略
+    使用 LLM 判断查询类型，决定使用哪种检索策略。
+    路由策略: 关键词快速匹配 → LLM 决策 → 默认 hybrid（含 fallback 保障）
     """
 
     def __init__(self, llm_client: QwenClient):
@@ -75,7 +74,7 @@ class LLMRouter:
         Returns:
             RouteDecision: 路由决策结果
         """
-        # 快速关键词匹配作为 fallback
+        # 快速关键词匹配
         quick_decision = self._quick_route(query)
         if quick_decision:
             logger.info(f"快速路由: {quick_decision.route} - {quick_decision.reason}")
@@ -83,9 +82,17 @@ class LLMRouter:
 
         # LLM 决策
         try:
-            # 使用 call 方法，system prompt 作为第一个参数
             response = self.llm.call(query, system=ROUTE_PROMPT)
-            return self._parse_response(response)
+            decision = self._parse_response(response)
+            # 如果 LLM 决策为 graph 但置信度不高，降级为 hybrid
+            if decision.route == "graph" and decision.confidence < 0.85:
+                logger.info(f"LLM 路由 graph 置信度低({decision.confidence})，降级为 hybrid")
+                return RouteDecision(
+                    route="hybrid",
+                    reason=f"graph 置信度不足，自动 fallback: {decision.reason}",
+                    confidence=decision.confidence
+                )
+            return decision
 
         except Exception as e:
             logger.warning(f"LLM 路由失败: {e}，使用默认 hybrid")
@@ -96,15 +103,21 @@ class LLMRouter:
             )
 
     def _quick_route(self, query: str) -> Optional[RouteDecision]:
-        """快速关键词路由"""
+        """
+        快速关键词路由
+
+        为避免 graph 路由后图检索未命中导致召回为 0，
+        graph 关键词统一路由到 hybrid（混合检索），
+        让图检索和向量检索互为 fallback。
+        """
         query_lower = query.lower()
 
-        # 图谱关键词
-        graph_keywords = ["风险", "诈骗", "可疑", "推销", "骚扰", "特征", "关系", "类型", "哪些"]
+        # 图谱关键词 — 路由到 hybrid（图检索 + 向量检索互为 fallback）
+        graph_keywords = ["风险", "诈骗", "可疑", "推销", "骚扰", "特征", "关系", "类型", "哪些", "中奖", "涉嫌", "案件"]
         if any(kw in query_lower for kw in graph_keywords):
             return RouteDecision(
-                route="graph",
-                reason="检测到图谱关键词",
+                route="hybrid",
+                reason="检测到图谱关键词，使用混合检索（向量+图谱 fallback）",
                 confidence=0.8
             )
 

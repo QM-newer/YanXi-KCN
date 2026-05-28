@@ -2,8 +2,6 @@
 图检索器
 ========
 基于社区检测和摘要的图谱检索
-
-参考 RAG-CITY src/retrieval/graph_retriever.py 设计
 """
 
 import json

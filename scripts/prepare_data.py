@@ -13,11 +13,16 @@ from src.utils.logger import get_logger
 from src.data.loader import load_call_records, load_contacts, load_training_data
 from src.data.cleaner import clean_call_text
 
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
 logger = get_logger(__name__)
 
 
-def prepare_training_data(data_dir: str = "data") -> dict:
+def prepare_training_data(data_dir: str = None) -> dict:
     """准备训练数据"""
+    if data_dir is None:
+        data_dir = str(PROJECT_ROOT / "data")
+    elif not Path(data_dir).is_absolute():
+        data_dir = str(PROJECT_ROOT / data_dir)
     stats = {
         "call_records": 0,
         "contacts": 0,
@@ -59,7 +64,7 @@ def main():
     """主函数"""
     import argparse
     parser = argparse.ArgumentParser(description="数据准备")
-    parser.add_argument("--data-dir", "-d", default="data", help="数据目录")
+    parser.add_argument("--data-dir", "-d", default=None, help="数据目录（相对于项目根目录）")
     args = parser.parse_args()
 
     logger.info("=" * 60)

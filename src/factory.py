@@ -1,7 +1,6 @@
 """
 依赖注入工厂
 ============
-参考 RAG-CITY factory.py 设计
 
 统一管理所有组件的初始化
 """
@@ -229,7 +228,7 @@ def build_indices(
 
 def build_call_rag(config_path: str = "configs/config.yaml") -> "HybridRAG":
     """
-    构建 Hybrid RAG 实例（参考 RAG-CITY build_hybrid_rag）
+    构建 Hybrid RAG 实例
 
     这是交互查询的入口，创建完整的 RAG 组件：
     - 向量检索器

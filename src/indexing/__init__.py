@@ -2,7 +2,6 @@
 索引构建模块
 ============
 向量索引、知识图谱和社区检测的构建
-参考 RAG-CITY 项目设计
 """
 
 from src.indexing.vector_builder import VectorIndexer, build_vector_index, load_vector_index

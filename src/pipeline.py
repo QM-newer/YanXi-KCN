@@ -1,13 +1,12 @@
 """
 来电助手主流程
 ==============
-参考 RAG-CITY 架构
 
 流程: 分类路由 → Agent处理 → 生成回复
 """
 
 import time
-from dataclasses import dataclass
+from dataclasses import dataclass, asdict
 from typing import Optional, Dict, Any, List
 from src.utils.logger import get_logger
 from src.retrieval.router import CallRouter, RouteDecision, CallCategory
@@ -22,7 +21,7 @@ logger = get_logger(__name__)
 
 @dataclass
 class PipelineResult:
-    """Pipeline处理结果"""
+    """Pipeline处理结果（统一 dataclass 接口）"""
     # 分类信息
     category: str
     category_desc: str
@@ -38,6 +37,10 @@ class PipelineResult:
     # 元信息
     timing: Dict[str, float]
     citations: Dict[str, Any]
+
+    def to_dict(self) -> dict:
+        """转为 dict，保持向后兼容"""
+        return asdict(self)
 
 
 class CallAssistantPipeline:

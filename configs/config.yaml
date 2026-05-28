@@ -1,12 +1,11 @@
 # 来电助手 Hybrid RAG 配置文件
-# 参考 RAG-CITY configs/config.yaml 设计
 
-# 路径配置
+# 路径配置（所有路径相对于项目根目录）
 paths:
   data_dir: data
   indices_dir: indices
   processed_dir: data/processed
-  vector_store: d:/temp/call_rag_vector  # 使用临时目录避免HNSW问题
+  vector_store: indices/vector_store
   summary_store: indices/summary_store
   graph_store: indices/graph.pkl
   communities: indices/communities.json

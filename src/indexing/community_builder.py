@@ -1,7 +1,6 @@
 """
 社区检测与摘要生成
 ==================
-参考 RAG-CITY community_builder.py 设计
 
 使用 Louvain 算法进行社区检测
 使用 LLM 生成社区摘要

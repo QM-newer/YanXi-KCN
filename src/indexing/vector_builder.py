@@ -1,7 +1,6 @@
 """
 向量索引构建
 ============
-参考 RAG-CITY vector_builder.py 设计
 
 使用 BGE embeddings 构建 Chroma 向量索引
 支持增量构建和断点续传

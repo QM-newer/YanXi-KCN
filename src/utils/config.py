@@ -46,7 +46,7 @@ def load_config(config_path: str = None) -> dict:
     加载配置文件
 
     Args:
-        config_path: 配置文件路径，默认使用 configs/config.yaml
+        config_path: 配置文件路径（相对路径基于项目根目录）
 
     Returns:
         配置字典

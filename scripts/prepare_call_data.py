@@ -1,7 +1,6 @@
 """
 来电数据预处理脚本
 ================
-参考 RAG-CITY scripts/preprocess.py 设计
 
 功能:
 1. 加载来电通话记录数据
@@ -102,9 +101,9 @@ def generate_category_summaries(df: pd.DataFrame) -> pd.DataFrame:
 
 def main():
     parser = argparse.ArgumentParser(description="来电数据预处理")
-    parser.add_argument("--data-dir", "-d", default="data", help="数据目录")
+    parser.add_argument("--data-dir", "-d", default="data", help="数据目录（相对于项目根目录）")
     parser.add_argument("--input", "-i", default=None, help="输入文件路径")
-    parser.add_argument("--output-dir", "-o", default="data/processed", help="输出目录")
+    parser.add_argument("--output-dir", "-o", default="data/processed", help="输出目录（相对于项目根目录）")
     parser.add_argument("--min-length", type=int, default=3, help="最小文本长度")
     parser.add_argument("--max-length", type=int, default=500, help="最大文本长度")
     args = parser.parse_args()
@@ -113,19 +112,28 @@ def main():
     logger.info("来电数据预处理")
     logger.info("=" * 60)
 
-    # 创建输出目录
+    # 项目根目录
+    project_root = Path(__file__).resolve().parent.parent
+
+    # 创建输出目录（相对路径基于项目根目录）
     output_dir = Path(args.output_dir)
+    if not output_dir.is_absolute():
+        output_dir = project_root / output_dir
     output_dir.mkdir(parents=True, exist_ok=True)
 
     # 加载数据
     if args.input:
         # 指定输入文件
-        records = load_json(args.input)
-        logger.info(f"从 {args.input} 加载 {len(records)} 条记录")
+        input_path = Path(args.input)
+        if not input_path.is_absolute():
+            input_path = project_root / input_path
+        records = load_json(str(input_path))
+        logger.info(f"从 {input_path} 加载 {len(records)} 条记录")
     else:
-        # 从数据目录加载 (使用绝对路径)
-        project_root = Path(__file__).resolve().parent.parent
-        data_dir = project_root / args.data_dir
+        # 从数据目录加载
+        data_dir = Path(args.data_dir)
+        if not data_dir.is_absolute():
+            data_dir = project_root / data_dir
         records = load_json(str(data_dir / "call_records.json"))
 
         # 补充其他数据源

@@ -22,8 +22,11 @@ def _doc_line(i: int, d, max_len: int = 150) -> str:
     return f"  [{i}] [{category}] {content}"
 
 
-def print_result(q: str, res: dict) -> None:
-    """打印查询结果"""
+def print_result(q: str, res) -> None:
+    """打印查询结果，兼容 dict 和 dataclass 两种返回"""
+    # 统一转为 dict 访问
+    if hasattr(res, 'to_dict'):
+        res = res.to_dict()
     print("\n" + "=" * 70)
     print(f"Q: {q}")
     print("-" * 70)

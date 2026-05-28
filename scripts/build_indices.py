@@ -1,7 +1,6 @@
 """
 增强版索引构建脚本
 =================
-参考 RAG-CITY scripts/build_indices.py 设计
 
 功能:
 1. 向量索引构建 (Chroma)
@@ -206,7 +205,7 @@ def build_all_indices(
     # ========== 1. 向量索引 ==========
     if not skip_vector:
         t0 = time.time()
-        vector_dir = Path("d:/temp/call_rag_vector")
+        vector_dir = indices_dir / "vector_store"
 
         indexer = VectorIndexer(
             embedder=embedding,
@@ -376,10 +375,14 @@ def main():
     logger.info("来电助手 Hybrid RAG 索引构建")
     logger.info("=" * 60)
 
-    # 路径
+    # 路径（默认相对路径基于项目根目录）
     project_root = PROJECT_ROOT
-    data_dir = project_root / args.data_dir
-    indices_dir = project_root / args.indices_dir
+    data_dir = Path(args.data_dir)
+    if not data_dir.is_absolute():
+        data_dir = project_root / data_dir
+    indices_dir = Path(args.indices_dir)
+    if not indices_dir.is_absolute():
+        indices_dir = project_root / indices_dir
 
     # 加载配置
     config = load_config()
