@@ -17,7 +17,7 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 logger = get_logger(__name__)
 
 
-def prepare_training_data(data_dir: str = None) -> dict:
+def prepare_training_data(data_dir: str | None = None) -> dict:
     """准备训练数据"""
     if data_dir is None:
         data_dir = str(PROJECT_ROOT / "data")
@@ -37,7 +37,7 @@ def prepare_training_data(data_dir: str = None) -> dict:
     logger.info("清洗文本...")
     cleaned = []
     for record in records:
-        text = clean_call_text(record.text)
+        text = clean_call_text(record.text or "")
         if text:
             cleaned.append({
                 "id": record.id,

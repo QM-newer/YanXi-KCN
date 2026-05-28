@@ -71,7 +71,9 @@ def create_vector_store(config: Dict = None) -> Optional[Any]:
 
     # 尝试加载已有索引
     try:
-        indexer.load()
+        # 如果 vector_store 加载失败，尝试从 vector_store_v6 的 SQLite 恢复
+        v6_sqlite = str(PROJECT_ROOT / config.get("paths", {}).get("vector_store_v6", "indices/vector_store_v6") / "chroma.sqlite3")
+        indexer.load(fallback_sqlite=v6_sqlite)
         logger.info(f"加载向量索引: {persist_dir}")
     except Exception as e:
         logger.warning(f"向量索引加载失败: {e}")

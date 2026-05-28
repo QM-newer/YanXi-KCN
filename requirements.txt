@@ -1,5 +1,9 @@
 # 通话来电混合RAG系统依赖
 # ==================== 核心依赖 ====================
+# LangChain 集成
+langchain-core>=0.3.0
+langchain-chroma>=0.2.0
+
 # 向量数据库
 chromadb>=0.4.22
 

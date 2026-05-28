@@ -93,8 +93,8 @@ def build_vector_index(
         return None
 
     # 创建目录
-    persist_dir = Path(persist_dir)
-    persist_dir.mkdir(parents=True, exist_ok=True)
+    persist_path = Path(persist_dir)
+    persist_path.mkdir(parents=True, exist_ok=True)
 
     logger.info(f"构建向量索引: {len(documents)} 文档")
 
@@ -103,7 +103,7 @@ def build_vector_index(
     db = Chroma.from_documents(
         documents=documents,
         embedding=embedder,
-        persist_directory=str(persist_dir),
+        persist_directory=persist_dir,
         collection_name=collection_name,
         collection_metadata={"hnsw:space": "cosine", "hnsw:construction_ef": 100, "hnsw:search_ef": 100}
     )
@@ -114,10 +114,70 @@ def build_vector_index(
     return db
 
 
+def _extract_records_from_chroma_sqlite(sqlite_path: str) -> list:
+    """
+    从 ChromaDB SQLite 文件中提取文档和元数据
+    用于 HNSW 索引损坏时的数据恢复
+
+    Args:
+        sqlite_path: chroma.sqlite3 文件路径
+
+    Returns:
+        记录列表，每条包含 text 和 metadata
+    """
+    import sqlite3
+
+    conn = sqlite3.connect(sqlite_path)
+    conn.row_factory = sqlite3.Row
+
+    try:
+        cur = conn.execute("""
+            SELECT id, string_value
+            FROM embedding_metadata
+            WHERE key = 'chroma:document'
+            ORDER BY id
+        """)
+        docs = {row['id']: row['string_value'] for row in cur.fetchall()}
+
+        cur = conn.execute("""
+            SELECT id, key, string_value
+            FROM embedding_metadata
+            WHERE key != 'chroma:document'
+            ORDER BY id, key
+        """)
+        metadata_map = {}
+        for row in cur.fetchall():
+            eid = row['id']
+            if eid not in metadata_map:
+                metadata_map[eid] = {}
+            metadata_map[eid][row['key']] = row['string_value']
+
+        records = []
+        for eid, text in docs.items():
+            meta = metadata_map.get(eid, {})
+            records.append({
+                "text": text,
+                "call_id": meta.get("call_id", ""),
+                "category": meta.get("category", ""),
+                "sub_category": meta.get("sub_category", ""),
+                "is_risky": meta.get("is_risky", "").lower() == "true" if meta.get("is_risky") else False,
+                "risk_type": meta.get("risk_type", ""),
+                "summary": meta.get("summary", ""),
+                "response": meta.get("response", ""),
+                "timestamp": meta.get("timestamp", ""),
+                "tags": meta.get("tags", ""),
+            })
+
+        return records
+    finally:
+        conn.close()
+
+
 def load_vector_index(
     embedder: Any,
     persist_dir: str,
-    collection_name: str = "call_records"
+    collection_name: str = "call_records",
+    fallback_sqlite: str = None
 ) -> Any:
     """
     加载已有向量索引
@@ -126,45 +186,96 @@ def load_vector_index(
         embedder: Embedding 模型
         persist_dir: 持久化目录
         collection_name: 集合名称
+        fallback_sqlite: 当索引损坏时，从哪个 SQLite 文件恢复数据
 
     Returns:
         Chroma 向量库
     """
-    import chromadb
-    from chromadb.config import Settings
+    from langchain_chroma import Chroma
 
-    persist_dir = Path(persist_dir)
-    if not persist_dir.exists():
-        logger.warning(f"索引目录不存在: {persist_dir}")
+    persist_path = Path(persist_dir)
+
+    # 检查 chroma.sqlite3 文件是否存在
+    sqlite_path = persist_path / "chroma.sqlite3"
+    if not sqlite_path.exists() and not fallback_sqlite:
+        logger.warning(f"ChromaDB 数据文件不存在: {sqlite_path}")
         return None
 
-    # 使用原生 Chroma 客户端
-    try:
-        client = chromadb.PersistentClient(
-            path=str(persist_dir),
-            settings=Settings(anonymized_telemetry=False)
-        )
-
-        # 获取 collection
+    # 方案1: 使用 LangChain Chroma 直接加载
+    if sqlite_path.exists():
         try:
-            collection = client.get_collection(collection_name)
-            logger.info(f"加载向量索引: {collection.count()} 条记录")
+            db = Chroma(
+                persist_directory=persist_dir,
+                embedding_function=embedder,
+                collection_name=collection_name,
+            )
+            count = db._collection.count()
+            logger.info(f"加载向量索引 (LangChain): {count} 条记录")
+            if count > 0:
+                return db
+        except Exception as e:
+            logger.warning(f"LangChain Chroma 加载失败: {e}")
 
-            # 创建 LangChain wrapper
-            from langchain_chroma import Chroma
+        # 方案2: 使用原生 Chroma 客户端（fallback）
+        try:
+            import chromadb
+            from chromadb.config import Settings
+
+            client = chromadb.PersistentClient(
+                path=persist_dir,
+                settings=Settings(anonymized_telemetry=False)
+            )
+
+            collection = client.get_collection(collection_name)
+            count = collection.count()
+            logger.info(f"加载向量索引 (原生): {count} 条记录")
+
+            from langchain_chroma import Chroma  # noqa: F811
             db = Chroma(
                 client=client,
                 collection_name=collection_name,
                 embedding_function=embedder
             )
-            return db
+            if count > 0:
+                return db
         except Exception as e:
-            logger.warning(f"获取 collection 失败: {e}")
-            return None
+            logger.warning(f"原生 Chroma 加载失败: {e}")
 
-    except Exception as e:
-        logger.warning(f"加载索引失败: {e}")
-        return None
+    # 方案3: HNSW 索引损坏，从 SQLite 中提取数据并重建
+    # 使用 fallback_sqlite（如果提供）或当前的 sqlite_path
+    recovery_source = fallback_sqlite or (str(sqlite_path) if sqlite_path.exists() else None)
+    if recovery_source and Path(recovery_source).exists():
+        logger.info("尝试从 SQLite 中提取数据并重建索引（HNSW 恢复模式）...")
+        try:
+            records = _extract_records_from_chroma_sqlite(str(recovery_source))
+            if not records:
+                logger.warning("从 SQLite 中未提取到任何记录")
+                return None
+
+            logger.info(f"从 SQLite 提取 {len(records)} 条记录，正在重建索引...")
+
+            # 删除旧索引文件
+            import shutil
+            shutil.rmtree(str(persist_path), ignore_errors=True)
+            persist_path.mkdir(parents=True, exist_ok=True)
+
+            # 用当前进程重建
+            db = build_vector_index(
+                records=records,
+                embedder=embedder,
+                persist_dir=str(persist_path),
+                collection_name=collection_name,
+                doc_type="call"
+            )
+
+            if db is not None:
+                count = db._collection.count()
+                logger.info(f"HNSW 恢复模式重建完成: {count} 条记录")
+                return db
+        except Exception as e:
+            logger.warning(f"HNSW 恢复模式失败: {e}")
+
+    return None
 
 
 def add_to_vector_index(
@@ -221,8 +332,8 @@ class VectorIndexer:
         collection_name: str = "call_records"
     ):
         self.embedder = embedder
-        self.persist_dir = Path(persist_dir)
-        self.persist_dir.mkdir(parents=True, exist_ok=True)
+        self.persist_dir_path = Path(persist_dir)
+        self.persist_dir_path.mkdir(parents=True, exist_ok=True)
         self.collection_name = collection_name
         self.db = None
 
@@ -252,19 +363,20 @@ class VectorIndexer:
         self.db = build_vector_index(
             records=records,
             embedder=embedder,
-            persist_dir=str(self.persist_dir),
+            persist_dir=str(self.persist_dir_path),
             collection_name=self.collection_name,
             doc_type=doc_type
         )
         return self
 
-    def load(self) -> "VectorIndexer":
+    def load(self, fallback_sqlite: str = None) -> "VectorIndexer":
         """加载已有索引"""
         embedder = self._get_embedder()
         self.db = load_vector_index(
             embedder=embedder,
-            persist_dir=str(self.persist_dir),
-            collection_name=self.collection_name
+            persist_dir=str(self.persist_dir_path),
+            collection_name=self.collection_name,
+            fallback_sqlite=fallback_sqlite
         )
         return self
 
