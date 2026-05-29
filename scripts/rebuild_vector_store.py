@@ -162,7 +162,21 @@ def rebuild_vector_store(
 
 
 if __name__ == "__main__":
-    source = PROJECT_ROOT / "indices" / "vector_store_v6" / "chroma.sqlite3"
+    # 优先从 vector_store 本身读取（数据可能已在这里），
+    # fallback 到 vector_store_v6
+    candidates = [
+        PROJECT_ROOT / "indices" / "vector_store" / "chroma.sqlite3",
+        PROJECT_ROOT / "indices" / "vector_store_v6" / "chroma.sqlite3",
+    ]
+    source = None
+    for c in candidates:
+        if c.exists():
+            source = c
+            break
+    if source is None:
+        print(f"错误: 未找到 chroma.sqlite3，尝试过: {candidates}")
+        sys.exit(1)
+    # 如果源和目标相同，先备份再重建
     target = PROJECT_ROOT / "indices" / "vector_store"
 
     if not source.exists():
