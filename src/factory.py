@@ -37,7 +37,7 @@ def _abs(path: str) -> str:
     return str(p if p.is_absolute() else (PROJECT_ROOT / p))
 
 
-def create_vector_store(config: Dict = None) -> Optional[Any]:
+def create_vector_store(config: Dict[str, Any] | None = None) -> Optional[Any]:
     """
     创建向量存储
 
@@ -81,7 +81,7 @@ def create_vector_store(config: Dict = None) -> Optional[Any]:
     return indexer
 
 
-def create_graph_store(config: Dict = None) -> Optional[GraphBuilder]:
+def create_graph_store(config: Dict[str, Any] | None = None) -> Optional[GraphBuilder]:
     """
     创建图谱存储
 
@@ -107,7 +107,7 @@ def create_graph_store(config: Dict = None) -> Optional[GraphBuilder]:
     return builder
 
 
-def create_llm_client(config: Dict = None) -> QwenClient:
+def create_llm_client(config: Dict[str, Any] | None = None) -> QwenClient:
     """
     创建LLM客户端
 
@@ -147,12 +147,12 @@ def build_indices(
     Returns:
         索引构建结果
     """
-    config = load_config(config_path)
+    config = load_config(config_path) if config_path else load_config()
     data_dir = data_dir or _abs(config.get("paths", {}).get("data_dir", "data"))
 
-    results = {
-        "vector_index": None,
-        "graph": None
+    results: Dict[str, Any] = {
+        "vector_index": None,  # type: ignore[assignment]
+        "graph": None  # type: ignore[assignment]
     }
 
     # 加载数据
@@ -182,10 +182,16 @@ def build_indices(
     # 构建向量索引
     if documents:
         try:
+            from src.indexing.embeddings import load_bge_embedding
+            embedder = load_bge_embedding()
             vector_indexer = VectorIndexer(
-                persist_dir=_abs(config.get("paths", {}).get("vector_store", "indices/vector_store"))
+                persist_dir=_abs(config.get("paths", {}).get("vector_store", "indices/vector_store")),
+                embedder=embedder
             )
-            vector_indexer.build_from_documents(documents)
+            vector_indexer.build_from_records([
+                {"text": doc.page_content, **doc.metadata}
+                for doc in documents
+            ])
             results["vector_index"] = vector_indexer
             logger.info("向量索引构建完成")
         except Exception as e:
@@ -209,8 +215,8 @@ def build_indices(
                 graph_builder.add_contact(
                     contact_id=contact.id,
                     name=contact.name,
-                    company=contact.company,
-                    relation=contact.relation
+                    company=contact.company or "",
+                    relation=contact.relation or ""
                 )
 
             # 构建NetworkX图
@@ -228,7 +234,7 @@ def build_indices(
     return results
 
 
-def build_call_rag(config_path: str = "configs/config.yaml") -> "HybridRAG":
+def build_call_rag(config_path: str = "configs/config.yaml") -> Any:
     """
     构建 Hybrid RAG 实例
 

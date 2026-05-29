@@ -18,7 +18,9 @@ logs/
 
 # Data (large files)
 *.parquet
+# Allow indices/ sqlite3 (vector stores), block others
 *.sqlite3
+!indices/**/chroma.sqlite3
 
 # Environment
 .env
